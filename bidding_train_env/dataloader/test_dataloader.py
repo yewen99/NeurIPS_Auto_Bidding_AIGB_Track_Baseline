@@ -62,7 +62,10 @@ class TestDataLoader:
         pValueSigmas = data.groupby('timeStepIndex')['pValueSigma'].apply(list).apply(np.array).tolist()
         leastWinningCosts = data.groupby('timeStepIndex')['leastWinningCost'].apply(list).apply(np.array).tolist()
         num_timeStepIndex = len(pValues)
-        return num_timeStepIndex, pValues, pValueSigmas, leastWinningCosts
+        budget = data['budget'].iloc[0]
+        cpa = data['CPAConstraint'].iloc[0]
+        category = data['advertiserCategoryIndex'].iloc[0]
+        return num_timeStepIndex, pValues, pValueSigmas, leastWinningCosts, budget, cpa, category
 
 
 if __name__ == '__main__':

@@ -11,4 +11,12 @@ torch.manual_seed(1)
 np.random.seed(1)
 
 if __name__ == "__main__":
-    run_decision_diffuser()
+    # bss = [64, 256, 512, 1024]
+    # taus = [1e-3, 1e-2, 1e-1]
+    # lrs = [1e-5, 1e-4, 1e-3]
+    # for bs in bss:
+    run_decision_diffuser(train_epoch=1000,
+        batch_size=1024,
+        gamma=1, 
+        tau=0.01, 
+        lr=1e-4,)

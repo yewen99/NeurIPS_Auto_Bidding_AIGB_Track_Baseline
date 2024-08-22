@@ -7,10 +7,15 @@ import torch
 
 
 class aigb_dataset(Dataset):
-    def __init__(self, step_len, **kwargs) -> None:
+    def __init__(self, step_len, load_preprocessed_tain_data = True, **kwargs) -> None:
         super().__init__()
-        states, actions, rewards, terminals = load_local_data_nips(
-            train_data_path="data/trajectory/trajectory_data.csv")
+        
+        if load_preprocessed_tain_data:
+            states, actions, rewards, terminals = load_local_preprocessed_data_nips(train_data_path='/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/data/preprocessed_train_data/train_data_all.npy')
+        else:
+            states, actions, rewards, terminals = load_local_data_nips(
+                train_data_path="data/trajectory/trajectory_data.csv")
+            
         self.states = states
         self.actions = actions
         self.rewards = rewards
@@ -90,3 +95,13 @@ def load_local_data_nips(train_data_path="data/traffic/training_data_rlData_fold
     rewards = training_data["reward"].to_numpy().reshape(-1, 1)
     terminals = training_data["terminal"].to_numpy().reshape(-1, 1)
     return states, actions, rewards, terminals
+
+# def preprocessed_train_data(data_dir='./data/trajectory'):
+#     for 
+#     return preprocessed_train_data_file
+
+
+def load_local_preprocessed_data_nips(train_data_path='./data/preprocessed_train_data/train_dict_s_a_r_t.npy'):
+    training_data = np.load(train_data_path, allow_pickle=True).item()
+    return training_data["states"], training_data["actions"], training_data["rewards"], training_data["terminals"]
+    
