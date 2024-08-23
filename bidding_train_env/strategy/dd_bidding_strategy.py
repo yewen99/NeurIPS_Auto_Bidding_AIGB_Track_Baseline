@@ -69,11 +69,12 @@ class DdBiddingStrategy(BaseBiddingStrategy):
         historical_bid_mean = np.mean([np.mean(bid) for bid in historyBid]) if historyBid else 0
 
         def mean_of_last_n_elements(history, n):
-            last_three_data = history[max(0, n - 3):n]
-            if len(last_three_data) == 0:
+            l = len(history)
+            last_n_data = history[max(0, l - n):l]
+            if len(last_n_data) == 0:
                 return 0
             else:
-                return np.mean([np.mean(data) for data in last_three_data])
+                return np.mean([np.mean(data) for data in last_n_data])
 
         last_three_xi_mean = mean_of_last_n_elements(history_xi, 3)
         last_three_conversion_mean = mean_of_last_n_elements(history_conversion, 3)

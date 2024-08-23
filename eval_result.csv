@@ -1,3 +1,2 @@
 file,score
-./saved_model/DDtest/diffuser,15.089485186708524
-./saved_model/DDtest/diffuser_best_epoch_loss_52_lr_0.0001_bs_1024_tau_0.01,21.696276509123752
+/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/main/saved_model/DDtest/diffuser_best_epoch_loss_15_lr_0.0001_bs_1024_tau_0.01,58.74982162268391

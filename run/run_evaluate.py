@@ -1,6 +1,9 @@
 import numpy as np
 import math
 import logging
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from bidding_train_env.strategy import PlayerBiddingStrategy
 from bidding_train_env.dataloader.test_dataloader import TestDataLoader
 from bidding_train_env.environment.offline_env import OfflineEnv
@@ -24,7 +27,7 @@ def getScore_nips(reward, cpa, cpa_constraint):
     return penalty * reward
 
 
-def run_test(file_path='./data/traffic/period-7.csv', model_name="dt.pt", model_param={}):
+def run_test(file_path='./data/traffic/period-7.csv', model_name=None, model_param={}):
     """
     offline evaluation
     """

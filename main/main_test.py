@@ -46,7 +46,7 @@ model_param["device"]="cuda"
 if __name__ == "__main__":
     csv_files = glob.glob(os.path.join('./data/traffic', '*.csv'))
     # pt_files = glob.glob(os.path.join('./saved_model/DTtest', '*.pt'))
-    pt_files = glob.glob(os.path.join('./saved_model/DDtest', '*.pt'))
+    pt_files = glob.glob(os.path.join('/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/main/saved_model/DDtest', 'diffuser_best_epoch_loss_15_lr_0.0001_bs_1024_tau_0.01.pt'))
     pt_names = [i.split("\\")[-1][:-3] for i in pt_files]
     eval_result = []
     for i, pt_f in enumerate(pt_files):
