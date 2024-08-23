@@ -6,4 +6,3 @@
 *.pyc
 /scripts/
 *.out
-/main/saved_model/
