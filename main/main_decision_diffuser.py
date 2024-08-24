@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -15,6 +17,10 @@ if __name__ == "__main__":
     # taus = [1e-3, 1e-2, 1e-1]
     # lrs = [1e-5, 1e-4, 1e-3]
     # for bs in bss:
+    batch_size = 1024
+    lr = 1e-3
+    tau = 0.01
+    print(f'training with batch_size:{batch_size} lr:{lr} tau:{tau}')
     run_decision_diffuser(train_epoch=1000,
         batch_size=1024,
         gamma=1, 

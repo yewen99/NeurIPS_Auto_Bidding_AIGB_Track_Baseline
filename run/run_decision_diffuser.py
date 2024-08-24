@@ -72,7 +72,7 @@ def run_decision_diffuser(
         print(f'epoch: {epoch}/{train_epoch} ==> epoch_loss:{record_epoch_loss} epoch_diff_loss:{record_epoch_diff_loss} epoch_inv_loss:{record_epoch_inv_loss}')
         if record_epoch_loss < best_score:
             best_score = record_epoch_loss
-            algorithm.save_net(save_path, save_name=f'_best_epoch_loss_{int(best_score)}_lr_{lr}_bs_{batch_size}_tau_{tau}')
+            algorithm.save_net(save_path, save_name=f'_best_epoch_loss_lr_{lr}_bs_{batch_size}_tau_{tau}')
             # algorithm.save_net(save_path)
             print(f'saved at epoch {epoch} with best epoch all loss: {best_score}!')
         
@@ -80,7 +80,7 @@ def run_decision_diffuser(
         #     algorithm.save_net(save_path, save_name=f'best_epoch_inv_loss')
 
     
-    algorithm.save_net(save_path, epi)
+    # algorithm.save_net(save_path, epi)
 
 
 if __name__ == '__main__':
