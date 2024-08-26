@@ -18,11 +18,13 @@ if __name__ == "__main__":
     # lrs = [1e-5, 1e-4, 1e-3]
     # for bs in bss:
     batch_size = 1024
-    lr = 1e-3
+    lr = 1e-5
     tau = 0.01
+    time_steps = 1000
     print(f'training with batch_size:{batch_size} lr:{lr} tau:{tau}')
     run_decision_diffuser(train_epoch=1000,
         batch_size=1024,
         gamma=1, 
         tau=0.01, 
-        lr=1e-4,)
+        lr=1e-4,
+        )

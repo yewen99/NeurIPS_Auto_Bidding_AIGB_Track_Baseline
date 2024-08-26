@@ -5,5 +5,5 @@
 *.pyc
 /scripts/
 *.out
-# /main/saved_model/
+/main/saved_model/
 /main/output_logs/

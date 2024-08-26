@@ -79,10 +79,7 @@ def cosine_beta_schedule(timesteps, s=0.008, dtype=torch.float32):
     return torch.tensor(betas_clipped, dtype=dtype)
 
 
-def apply_conditioning(x, conditions, action_dim: int):
-    x[:, :conditions.shape[0], action_dim:] = conditions
 
-    return x
 
 
 class WeightedStateLoss(nn.Module):
@@ -411,16 +408,26 @@ class GaussianInvDynDiffusion(nn.Module):
             batch_size = shape[0]
             x = 0.5 * torch.randn(shape[0], shape[1], shape[2], device=cond.device)
 
-            x = apply_conditioning(x, cond, 0)
+            x = self.apply_conditioning(x, cond, action_dim=0, time_step=self.n_timesteps)
 
             for i in range(self.n_timesteps - 1, -1, -1):
                 timesteps = torch.ones(batch_size,
                                        device=cond.device) * i
                 x = self.p_sample(x, cond, timesteps, returns)
 
-                x = apply_conditioning(x, cond, 0)
+                x = self.apply_conditioning(x, cond, action_dim=0, time_step=i)
 
             return x
+
+    def apply_conditioning(self, x, conditions, action_dim: int, time_step:int):
+        # apply noise to the condition
+        noise = torch.randn_like(conditions, device=conditions.device)
+        time_step = torch.randint(time_step, time_step+1, (conditions.shape[0],), device=conditions.device).long()
+        conditions_noisy = self.q_sample(x_start=conditions, t=time_step, noise=noise)
+        
+        x[:, :conditions.shape[0], action_dim:] = conditions_noisy
+
+        return x
 
     #  @torch.no_grad()
     def conditional_sample(self, cond, returns: torch.Tensor = torch.ones(1, 1), horizon: int = 48):
@@ -494,7 +501,7 @@ class DFUSER(nn.Module):
     def __init__(self, dim_obs=16, dim_actions=1, gamma=1, tau=0.01, lr=1e-4,
                  network_random_seed=200,
                  ACTION_MAX=10, ACTION_MIN=0,
-                 step_len=48, n_timesteps=10):
+                 step_len=48, n_timesteps=1000):
 
         super().__init__()
 

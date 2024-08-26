@@ -8,12 +8,13 @@ import tqdm
 
 def run_decision_diffuser(
         save_path="saved_model/DDtest",
-        train_epoch=1,
+        train_epoch=100,
         batch_size=1000,
         gamma=1, 
         tau=0.01, 
         lr=1e-4,
-        network_random_seed=200):
+        network_random_seed=200,
+        ):
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("train_epoch", train_epoch)

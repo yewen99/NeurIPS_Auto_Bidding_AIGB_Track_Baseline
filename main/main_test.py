@@ -46,16 +46,19 @@ model_param["device"]="cuda"
 if __name__ == "__main__":
     csv_files = glob.glob(os.path.join('./data/traffic', '*.csv'))
     # pt_files = glob.glob(os.path.join('./saved_model/DTtest', '*.pt'))
-    pt_files = glob.glob(os.path.join('/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/main/saved_model/DDtest', 'diffuser_best_epoch_loss_15_lr_0.0001_bs_1024_tau_0.01.pt'))
+    
+    pt_files = glob.glob(os.path.join('/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/saved_model/DDtest', 'diffuser_best_epoch_loss_lr_0.0001_bs_1024_tau_0.01.pt'))
     pt_names = [i.split("\\")[-1][:-3] for i in pt_files]
     eval_result = []
     for i, pt_f in enumerate(pt_files):
         score = 0.0
+        verified_csv_files = 0
         for file in csv_files:
             print(f'Evaluating {pt_f} in {file} ===>')
             score += run_test(file_path=file, model_name=pt_names[i]+".pt", model_param=model_param)
-            # break
-        score /= len(csv_files)
+            verified_csv_files += 1
+            break
+        score /= verified_csv_files
         eval_result.append([pt_names[i], score])
         print("Average score of {}: {}".format(pt_names[i]+".pt", score))
         eval_result_csv = pd.DataFrame(eval_result, columns=["file", "score"]).sort_values(by="file")
