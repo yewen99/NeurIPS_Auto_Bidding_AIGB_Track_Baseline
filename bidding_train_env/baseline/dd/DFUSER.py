@@ -282,10 +282,11 @@ class TemporalUnet(nn.Module):
 
 
 class GaussianInvDynDiffusion(nn.Module):
-    def __init__(self, model, horizon, observation_dim, action_dim, n_timesteps=1000,
+    def __init__(self, model, horizon, observation_dim, action_dim, n_timesteps=10,
                  clip_denoised=False, predict_epsilon=True, hidden_dim=256,
                  loss_discount=1.0, returns_condition=False,
-                 condition_guidance_w=0.1):
+                 condition_guidance_w=0.1,
+                 use_noisy_condition=True):
         super().__init__()
 
         self.horizon = horizon
@@ -301,6 +302,8 @@ class GaussianInvDynDiffusion(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, self.action_dim),
+            # add
+            nn.ReLU(),   # this is because a_t is not smaller than 0
         )
         self.returns_condition = returns_condition
         self.condition_guidance_w = condition_guidance_w
@@ -338,6 +341,9 @@ class GaussianInvDynDiffusion(nn.Module):
 
         loss_weights = self.get_loss_weights(loss_discount)
         self.loss_fn = Losses['state_l2'](loss_weights)
+
+        # custom hyperparameters
+        self.use_noisy_condition = use_noisy_condition
 
     def get_loss_weights(self, discount):
 
@@ -420,12 +426,20 @@ class GaussianInvDynDiffusion(nn.Module):
             return x
 
     def apply_conditioning(self, x, conditions, action_dim: int, time_step:int):
-        # apply noise to the condition
-        noise = torch.randn_like(conditions, device=conditions.device)
-        time_step = torch.randint(time_step, time_step+1, (conditions.shape[0],), device=conditions.device).long()
-        conditions_noisy = self.q_sample(x_start=conditions, t=time_step, noise=noise)
-        
-        x[:, :conditions.shape[0], action_dim:] = conditions_noisy
+        if self.use_noisy_condition:
+            # apply noise to the condition
+            if time_step > 0:
+                conditions = conditions.unsqueeze(0)
+                noise = torch.randn_like(conditions, device=conditions.device)
+                time_step = torch.randint(time_step-1, time_step, (conditions.shape[0],), device=conditions.device).long()
+                conditions_noisy = self.q_sample(x_start=conditions, t=time_step, noise=noise)
+                conditions_noisy = conditions_noisy.squeeze(0)
+            else:
+                conditions_noisy = conditions
+        else:
+            conditions_noisy = conditions
+        x[:, :conditions_noisy.shape[0], action_dim:] = conditions_noisy
+        # x[:, :conditions.shape[0], action_dim:] = conditions_noisy
 
         return x
 
@@ -484,7 +498,9 @@ class GaussianInvDynDiffusion(nn.Module):
         x_t_3 = torch.cat(
             [torch.zeros(x.shape[0], 2, x.shape[-1] - self.action_dim, device=x.device), x[:, :-3, self.action_dim:]],
             dim=1)
-        x_comb_t = torch.cat([x_t_2, x_t_3, x_t, x_t_1], dim=-1)
+        # x_comb_t = torch.cat([x_t_2, x_t_3, x_t, x_t_1], dim=-1)
+        # revised: every obeservation x_comb_t (dim=64) := [s_{t-2}, s_{t-1}, s_t, s_{t+1}], s_{t-2} --> x_t_3, s_{t-1} --> x_t_2, s_{t+1} --> x_t_1ß
+        x_comb_t = torch.cat([x_t_3, x_t_2, x_t, x_t_1], dim=-1)  
         x_comb_t = x_comb_t.reshape(-1, 4 * self.observation_dim)
         masks_flat = masks[:, :-1].reshape(-1)
         x_comb_t = x_comb_t[masks_flat]
@@ -501,7 +517,8 @@ class DFUSER(nn.Module):
     def __init__(self, dim_obs=16, dim_actions=1, gamma=1, tau=0.01, lr=1e-4,
                  network_random_seed=200,
                  ACTION_MAX=10, ACTION_MIN=0,
-                 step_len=48, n_timesteps=1000):
+                 step_len=48, n_timesteps=10,
+                 use_noisy_condition=True):
 
         super().__init__()
 
@@ -534,7 +551,8 @@ class DFUSER(nn.Module):
             n_timesteps=n_timesteps,
             loss_discount=1,
             returns_condition=True,
-            condition_guidance_w=1.2
+            condition_guidance_w=1.2,
+            use_noisy_condition=use_noisy_condition,
         )
 
         self.step = 0
@@ -604,7 +622,7 @@ class DFUSER(nn.Module):
             states_curt2 = conditions[-3].float()[None, :]
         else:
             states_curt2 = torch.zeros_like(states_next, device=states_next.device)
-        states_comb = torch.hstack([states_curt1, states_curt2, conditions[-1].float()[None, :], states_next])
+        states_comb = torch.hstack([states_curt2, states_curt1, conditions[-1].float()[None, :], states_next])
         actions = self.diffuser.inv_model(states_comb)
         actions = actions.detach().cpu()[0]  # .cpu().data.numpy()
         return actions

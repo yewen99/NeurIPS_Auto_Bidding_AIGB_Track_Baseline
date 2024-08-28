@@ -43,16 +43,22 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed(seed)
 
 model_param["device"]="cuda"
+model_param["use_noisy_condition"]=False
+
 if __name__ == "__main__":
-    csv_files = glob.glob(os.path.join('./data/traffic', '*.csv'))
+    csv_files = glob.glob(os.path.join('./data/traffic', 'period-7.csv'))
     # pt_files = glob.glob(os.path.join('./saved_model/DTtest', '*.pt'))
     
-    pt_files = glob.glob(os.path.join('/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/saved_model/DDtest', 'diffuser_best_epoch_loss_lr_0.0001_bs_1024_tau_0.01.pt'))
+    pt_files = glob.glob(os.path.join('/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/main/saved_model/DDtest', '*.pt'))
     pt_names = [i.split("\\")[-1][:-3] for i in pt_files]
     eval_result = []
     for i, pt_f in enumerate(pt_files):
         score = 0.0
         verified_csv_files = 0
+        if pt_f[-7] == '_':
+            model_param["n_timesteps"] = int(pt_f[-6:-3])
+        else:
+            model_param["n_timesteps"] = int(pt_f[-7:-3])
         for file in csv_files:
             print(f'Evaluating {pt_f} in {file} ===>')
             score += run_test(file_path=file, model_name=pt_names[i]+".pt", model_param=model_param)

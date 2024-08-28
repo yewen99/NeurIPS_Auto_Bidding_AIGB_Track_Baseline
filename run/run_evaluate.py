@@ -110,4 +110,8 @@ def run_test(file_path='./data/traffic/period-7.csv', model_name=None, model_par
 
 
 if __name__ == '__main__':
-    run_test()
+    model_param = {"use_noisy_condition": False,
+                   "n_timesteps": 30}
+    model_name = '/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/main/saved_model/DDtest/diffuser_best_epoch_loss_lr_0.0001_bs_1024_tau_0.01_step30.pt'
+    run_test(model_name=model_name,
+            model_param=model_param)

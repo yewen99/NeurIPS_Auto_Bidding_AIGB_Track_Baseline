@@ -22,7 +22,7 @@ class DdBiddingStrategy(BaseBiddingStrategy):
         else:
             model_path = os.path.join(dir_name, "saved_model", "DDtest", 'diffuser.pt')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model = DFUSER()
+        self.model = DFUSER(n_timesteps=model_param["n_timesteps"], use_noisy_condition=model_param["use_noisy_condition"])
         self.model.load_net(model_path,device =self.device)
         self.state_dim = 16
         self.input = np.zeros((48,self.state_dim+1))
@@ -105,7 +105,7 @@ class DdBiddingStrategy(BaseBiddingStrategy):
         self.input[:,-1] = timeStepIndex
         x = torch.tensor(self.input.reshape(-1), device=self.device)
         alpha  = self.model(x)
-        alpha = alpha.item()
+        alpha = alpha.item() 
         alpha = max(0,alpha)
         bids = alpha * pValues
         return bids
