@@ -6,6 +6,8 @@ from bidding_train_env.baseline.dd.DFUSER import DFUSER
 import os
 
 
+
+
 class DdBiddingStrategy(BaseBiddingStrategy):
     """
     Decision-Diffuser-PlayerStrategy
@@ -17,6 +19,12 @@ class DdBiddingStrategy(BaseBiddingStrategy):
         file_name = os.path.dirname(os.path.realpath(__file__))
         dir_name = os.path.dirname(file_name)
         dir_name = os.path.dirname(dir_name)
+        
+        if model_param is None:
+            # for submission
+            model_param = {"n_timesteps": 50, 
+               "use_noisy_condition": False}
+
         if model_name is not None:
             model_path = model_name
         else:
@@ -24,8 +32,10 @@ class DdBiddingStrategy(BaseBiddingStrategy):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = DFUSER(n_timesteps=model_param["n_timesteps"], use_noisy_condition=model_param["use_noisy_condition"])
         self.model.load_net(model_path,device =self.device)
-        self.state_dim = 16
+        # self.state_dim = 16
+        self.state_dim = 5
         self.input = np.zeros((48,self.state_dim+1))
+        self.cpa = torch.clamp((torch.tensor(cpa, dtype=torch.float32) - 6) / (12 - 6), min=0., max=1.)
 
 
     def reset(self):
@@ -90,22 +100,29 @@ class DdBiddingStrategy(BaseBiddingStrategy):
         last_three_pv_num_total = sum(
             [len(historyBid[i]) for i in range(max(0, timeStepIndex - 3), timeStepIndex)]) if historyBid else 0
 
-        test_state = np.array([
-            time_left, budget_left, historical_bid_mean, last_three_bid_mean,
-            historical_LeastWinningCost_mean, historical_pValues_mean, historical_conversion_mean,
-            historical_xi_mean, last_three_LeastWinningCost_mean, last_three_pValues_mean,
-            last_three_conversion_mean, last_three_xi_mean,
-            current_pValues_mean, current_pv_num, last_three_pv_num_total,
-            historical_pv_num_total
-        ])
+        # test_state = np.array([
+        #     time_left, budget_left, historical_bid_mean, last_three_bid_mean,
+        #     historical_LeastWinningCost_mean, historical_pValues_mean, historical_conversion_mean,
+        #     historical_xi_mean, last_three_LeastWinningCost_mean, last_three_pValues_mean,
+        #     last_three_conversion_mean, last_three_xi_mean,
+        #     current_pValues_mean, current_pv_num, last_three_pv_num_total,
+        #     historical_pv_num_total
+        # ])
+
+        # simplify test state to reproduce the result of AIGB
+        eps = 1e-10
+        budget_spend_speed = ((self.budget - self.remaining_budget)/self.budget) / (1 - time_left + eps)
+        realtime_cost_efficiency = last_three_LeastWinningCost_mean / (last_three_conversion_mean + eps)
+        avg_cost_efficiency = historical_LeastWinningCost_mean / (historical_conversion_mean+eps)
+        test_state = np.array([time_left, budget_left, budget_spend_speed, realtime_cost_efficiency, avg_cost_efficiency])
 
 
         for i in range(self.state_dim):
             self.input[timeStepIndex,i] = test_state[i]
         self.input[:,-1] = timeStepIndex
         x = torch.tensor(self.input.reshape(-1), device=self.device)
-        alpha  = self.model(x)
-        alpha = alpha.item() 
+        alpha  = self.model(x, cpa=self.cpa)
+        alpha = alpha.item()
         alpha = max(0,alpha)
         bids = alpha * pValues
         return bids

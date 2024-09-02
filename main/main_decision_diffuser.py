@@ -18,14 +18,17 @@ if __name__ == "__main__":
     # lrs = [1e-5, 1e-4, 1e-3]
     # for bs in bss:
     batch_size = 1024
-    lr = 1e-3
+    lr = 1e-5
     tau = 0.01
-    time_steps = 100
+    time_steps = 50
     print(f'training with batch_size:{batch_size} lr:{lr} tau:{tau} time_steps:{time_steps}')
-    run_decision_diffuser(train_epoch=1000,
+    # pretrained_model = '/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/main/saved_model/DDtest/diffuser_best_epoch_diff_loss_0.33_lr_0.0001_bs_512_tau_0.01_step_50.pt'
+    pretrained_model= None
+    run_decision_diffuser(train_epoch=10000,
         batch_size=batch_size,
         gamma=1, 
         tau=tau, 
         lr=lr,
         n_timesteps=time_steps,
+        pretrained_model=pretrained_model,
         )

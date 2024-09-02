@@ -51,6 +51,7 @@ def run_test(file_path='./data/traffic/period-7.csv', model_name=None, model_par
             'historyPValueInfo': []
         }
 
+        end_at_timestep = 0
         for timeStep_index in range(num_timeStepIndex):
             # logger.info(f'Timestep Index: {timeStep_index + 1} Begin')
 
@@ -61,12 +62,11 @@ def run_test(file_path='./data/traffic/period-7.csv', model_name=None, model_par
             if agent.remaining_budget < env.min_remaining_budget:
                 bid = np.zeros(pValue.shape[0])
             else:
-
                 bid = agent.bidding(timeStep_index, pValue, pValueSigma, history["historyPValueInfo"],
                                     history["historyBids"],
                                     history["historyAuctionResult"], history["historyImpressionResult"],
                                     history["historyLeastWinningCost"])
-
+                end_at_timestep += 1
             tick_value, tick_cost, tick_status, tick_conversion = env.simulate_ad_bidding(pValue, pValueSigma, bid,
                                                                                           leastWinningCost)
 
@@ -103,6 +103,7 @@ def run_test(file_path='./data/traffic/period-7.csv', model_name=None, model_par
         logger.info(f'Total Cost: {all_cost}')
         logger.info(f'CPA-real: {cpa_real}')
         logger.info(f'CPA-constraint: {cpa_constraint}')
+        logger.info(f'used_up_at_time_step: {end_at_timestep}')
         logger.info(f'Score: {score}')
     overall_score = overall_score/len(keys)
     logger.info(f'Period Score: {overall_score}')
@@ -111,7 +112,7 @@ def run_test(file_path='./data/traffic/period-7.csv', model_name=None, model_par
 
 if __name__ == '__main__':
     model_param = {"use_noisy_condition": False,
-                   "n_timesteps": 30}
-    model_name = '/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/main/saved_model/DDtest/diffuser_best_epoch_loss_lr_0.0001_bs_1024_tau_0.01_step30.pt'
+                   "n_timesteps": 50}
+    model_name = '/home/yewen001/CODE/ks/aigb/NeurIPS_Auto_Bidding_AIGB_Track_Baseline/saved_model/DDtest/diffuser_best_epoch_diff_loss_0.96_lr_1e-05_bs_1024_tau_0.01_step_50.pt'
     run_test(model_name=model_name,
             model_param=model_param)

@@ -178,8 +178,16 @@ class TemporalUnet(nn.Module):
         self.condition_dropout = condition_dropout
         self.calc_energy = calc_energy
 
+        # self.returns_mlp = nn.Sequential(
+        #     nn.Linear(1, dim),
+        #     act_fn,
+        #     nn.Linear(dim, dim * 4),
+        #     act_fn,
+        #     nn.Linear(dim * 4, dim),
+        # )
+
         self.returns_mlp = nn.Sequential(
-            nn.Linear(1, dim),
+            nn.Linear(2, dim),
             act_fn,
             nn.Linear(dim, dim * 4),
             act_fn,
@@ -286,7 +294,8 @@ class GaussianInvDynDiffusion(nn.Module):
                  clip_denoised=False, predict_epsilon=True, hidden_dim=256,
                  loss_discount=1.0, returns_condition=False,
                  condition_guidance_w=0.1,
-                 use_noisy_condition=True):
+                 use_noisy_condition=True,
+                 action_max=30):
         super().__init__()
 
         self.horizon = horizon
@@ -295,16 +304,16 @@ class GaussianInvDynDiffusion(nn.Module):
         self.transition_dim = observation_dim + action_dim
         self.model = model
         self.inv_model = nn.Sequential(
-            nn.Linear(4 * self.observation_dim, hidden_dim),
+            nn.Linear(4 * self.observation_dim, hidden_dim*4),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim*4, hidden_dim*4),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim*4, hidden_dim*2),
             nn.ReLU(),
-            nn.Linear(hidden_dim, self.action_dim),
-            # add
-            nn.ReLU(),   # this is because a_t is not smaller than 0
+            nn.Linear(hidden_dim*2, self.action_dim),
         )
+        self.action_max = action_max
+
         self.returns_condition = returns_condition
         self.condition_guidance_w = condition_guidance_w
 
@@ -380,15 +389,19 @@ class GaussianInvDynDiffusion(nn.Module):
         posterior_log_variance_clipped = extract(self.posterior_log_variance_clipped, t, x_t.shape)
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
 
-    def p_mean_variance(self, x, cond, t, returns: torch.Tensor = torch.ones(1, 1)):
-        if self.returns_condition:
-            # epsilon could be epsilon or x0 itself
+    def p_mean_variance(self, x, cond, t, returns: torch.Tensor = torch.ones(1, 1), aigb_base = False):
+        if aigb_base: # whether use aigb baseline
+            if self.returns_condition:
+                # epsilon could be epsilon or x0 itself
 
-            epsilon_cond = self.model(x, cond, t, returns, use_dropout=False)
-            epsilon_uncond = self.model(x, cond, t, returns, force_dropout=True)
-            epsilon = epsilon_uncond + self.condition_guidance_w * (epsilon_cond - epsilon_uncond)
+                epsilon_cond = self.model(x, cond, t, returns, use_dropout=False)
+                epsilon_uncond = self.model(x, cond, t, returns, force_dropout=True)
+                epsilon = epsilon_uncond + self.condition_guidance_w * (epsilon_cond - epsilon_uncond)
+            else:
+                epsilon = self.model(x, cond, t)
+
         else:
-            epsilon = self.model(x, cond, t)
+            epsilon = self.model(x, cond, t, returns, use_dropout=False, force_dropout=False)
 
         t = t.detach().to(torch.int64)
         x_recon = self.predict_start_from_noise(x, t=t, noise=epsilon)
@@ -514,9 +527,9 @@ class GaussianInvDynDiffusion(nn.Module):
 
 
 class DFUSER(nn.Module):
-    def __init__(self, dim_obs=16, dim_actions=1, gamma=1, tau=0.01, lr=1e-4,
+    def __init__(self, dim_obs=5, dim_actions=1, gamma=1, tau=0.01, lr=1e-4,
                  network_random_seed=200,
-                 ACTION_MAX=10, ACTION_MIN=0,
+                 ACTION_MAX=30, ACTION_MIN=0,
                  step_len=48, n_timesteps=10,
                  use_noisy_condition=True):
 
@@ -553,6 +566,7 @@ class DFUSER(nn.Module):
             returns_condition=True,
             condition_guidance_w=1.2,
             use_noisy_condition=use_noisy_condition,
+            action_max=self.ACTION_MAX
         )
 
         self.step = 0
@@ -599,7 +613,8 @@ class DFUSER(nn.Module):
 
         return loss, (diffuse_loss, inv_loss)
 
-    def forward(self, x: torch.Tensor):
+
+    def forward(self, x: torch.Tensor, cpa: torch.Tensor):
         if len(list(x.shape)) < 2:
             x = torch.reshape(x, [48, self.num_of_states + 1])
         else:
@@ -609,7 +624,8 @@ class DFUSER(nn.Module):
         states = x[:cur_time]
         states = states[:, :-1]
         conditions = states
-        returns = torch.tensor([[1.0]], device=x.device)
+        # returns = torch.tensor([[1.0]], device=x.device)
+        returns = torch.tensor([[1.0, cpa]], device=x.device)
         x_0 = self.diffuser(cond=conditions, returns=returns)
 
         states = x_0[0, :cur_time + 1]
@@ -624,6 +640,7 @@ class DFUSER(nn.Module):
             states_curt2 = torch.zeros_like(states_next, device=states_next.device)
         states_comb = torch.hstack([states_curt2, states_curt1, conditions[-1].float()[None, :], states_next])
         actions = self.diffuser.inv_model(states_comb)
+        actions = torch.clamp(actions, min=self.ACTION_MIN, max=self.ACTION_MAX)
         actions = actions.detach().cpu()[0]  # .cpu().data.numpy()
         return actions
 

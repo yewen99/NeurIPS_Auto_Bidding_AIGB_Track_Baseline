@@ -15,6 +15,7 @@ def run_decision_diffuser(
         lr=1e-4,
         network_random_seed=200,
         n_timesteps=10,
+        pretrained_model=None,
         ):
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -24,6 +25,9 @@ def run_decision_diffuser(
     algorithm = DFUSER(gamma=gamma, tau=tau, lr=lr,
                  network_random_seed=network_random_seed, n_timesteps=n_timesteps
                  )
+    if pretrained_model is not None:
+        print(f'load model from {pretrained_model}')
+        algorithm.load_net(pretrained_model)
     algorithm = algorithm.to(device)
 
     args_dict = {'data_version': 'monk_data_small'}
@@ -50,6 +54,7 @@ def run_decision_diffuser(
             states.to(device)
             actions.to(device)
             returns.to(device)
+            
             masks.to(device)
 
             start_time = time.time()
@@ -72,12 +77,16 @@ def run_decision_diffuser(
         record_epoch_diff_loss /= len(dataloader)
         record_epoch_inv_loss /= len(dataloader)
         print(f'epoch: {epoch}/{train_epoch} ==> epoch_loss:{record_epoch_loss} epoch_diff_loss:{record_epoch_diff_loss} epoch_inv_loss:{record_epoch_inv_loss}')
-        if record_epoch_loss < best_score:
-            best_score = record_epoch_loss
-            algorithm.save_net(save_path, save_name=f'_best_epoch_loss_lr_{lr}_bs_{batch_size}_tau_{tau}_step_{n_timesteps}')
+        # if record_epoch_loss < best_score:
+        #     best_score = record_epoch_loss
+        #     algorithm.save_net(save_path, save_name=f'_best_epoch_loss_lr_{lr}_bs_{batch_size}_tau_{tau}_step_{n_timesteps}')
+        #     # algorithm.save_net(save_path)
+        #     print(f'saved at epoch {epoch} with best epoch all loss: {best_score}!')
+        if record_epoch_diff_loss < best_score:
+            best_score = record_epoch_diff_loss
+            algorithm.save_net(save_path, save_name=f'_best_epoch_diff_loss_{best_score:.2f}_lr_{lr}_bs_{batch_size}_tau_{tau}_step_{n_timesteps}')
             # algorithm.save_net(save_path)
-            print(f'saved at epoch {epoch} with best epoch all loss: {best_score}!')
-        
+            print(f'saved at epoch {epoch} with best epoch diffusion loss: {best_score}!')       
         # if record_epoch_inv_loss < best_score:
         #     algorithm.save_net(save_path, save_name=f'best_epoch_inv_loss')
 
